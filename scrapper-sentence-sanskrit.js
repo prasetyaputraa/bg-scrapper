@@ -9,10 +9,14 @@ let totalSloka = 0;
 
 for (let i = 1; i <= 18; i++) {
   (async function(i) {
-    let chapterNum = i < 10 ? i : "0" + i;
+    let chapterNum = i < 10 ? "0" + i : i;
+
+    let slokaCount = 0;
 
     let pageUrl = "http://sacred-texts.com/hin/bgs/bgs" + chapterNum + ".htm";
     var root = xml.element();
+
+    console.log(pageUrl);
 
     var xmlDocument = fs.createWriteStream('./raw_sentences_sanskrit/raw_sentences_sanskrit_bab' + i + '.xml');
     var stream = xml({root: root}, {indent: '\t', stream: true, declaration: true});
@@ -23,41 +27,35 @@ for (let i = 1; i <= 18; i++) {
 
     await rp(pageUrl)
       .then(function(html){
+        let currentSlokaString = '';
+
         // the idea is to find tags <br> and read their next element first word on end of it's string
+        // TODO: Here is the code that need to be touched
+        cheerio('*', html).each(function (index, element) {
 
-        cheerio('.t', html).each(function (index, element) {
-          let sanskrit   = "";
-          let indonesian = "";
+          let nextEl = cheerio(element)[0].nextSibling.nodeValue;
 
-          let currentSloka = null;
-          let currentEl = cheerio(element);
-
-          for (let s = 0; s < 100; s++) {
-            if (currentEl.prev().text().trim().substring(0, i.toString().length) == i) {
-              currentSloka = currentEl.prev().text().trim().substring(i.toString().length + 1);
-              curr = parseInt(currentSloka) + 1;
-              break;
-            }
-
-            currentEl = currentEl.prev();
-          }
-
-          if (currentSloka == null) {
-            curr = curr + 1;
-            currentSloka == curr;
-          }
-
-          if (cheerio(element).text() == '\nTerjemahan') {
-            if (cheerio(element).next()[0].nextSibling.nodeValue.trim() != '') {
-              indonesian = cheerio(element).next()[0].nextSibling.nodeValue.trim().replace(/\n/g, " ");
+          if (((typeof nextEl) === 'string') && nextEl.trim().length >= 1) {
+            //TODO:: Dividing Slokas
+            // if the last 4 or 5 of nextEl value is number
+            // then add $currenSlokaString to the document
+            // indicating new line of sloka.
+            if (!isNaN(slokaNumber = parseFloat(nextEl.substr(-4).trim()))) {
+              if (nextEl.trim().length >= 4) {
+                currentSlokaString += '\n' + nextEl.substring(0, nextEl.length - 4).trim();
+              } else {
+                currentSlokaString += '\n' + nextEl.trim();
+              }
+              // add $currentSlokaString to document
+              // clear $currentSlokaString.
+              root.push({sentences: [{ _attr: {sloka: slokaNumber}}, {sanskrit: currentSlokaString}]});
+              slokaCount += 1;
+              currentSlokaString = '';
             } else {
-              indonesian = cheerio(element).next().next().text().trim().replace(/\n/g, " ");
+              currentSlokaString += '\n' + nextEl.trim();
             }
-            root.push({sentences: [{ _attr: { sloka: currentSloka}}, {sanskrit: sanskrit}, {indonesian: indonesian}]});
+
           }
-
-          slokaCount = currentSloka;
-
         });
 
         root.close();
