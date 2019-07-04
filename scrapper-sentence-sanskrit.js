@@ -16,7 +16,7 @@ for (let i = 1; i <= 18; i++) {
     let pageUrl = "http://sacred-texts.com/hin/bgs/bgs" + chapterNum + ".htm";
     var root = xml.element();
 
-    console.log(pageUrl);
+    console.log('Fetching and processing data at url:', pageUrl);
 
     var xmlDocument = fs.createWriteStream('./raw_sentences_sanskrit/raw_sentences_sanskrit_bab' + i + '.xml');
     var stream = xml({root: root}, {indent: '\t', stream: true, declaration: true});
@@ -30,24 +30,38 @@ for (let i = 1; i <= 18; i++) {
         let currentSlokaString = '';
 
         // the idea is to find tags <br> and read their next element first word on end of it's string
-        // TODO: Here is the code that need to be touched
         cheerio('*', html).each(function (index, element) {
 
           let nextEl = cheerio(element)[0].nextSibling.nodeValue;
 
           if (((typeof nextEl) === 'string') && nextEl.trim().length >= 1) {
-            //TODO:: Dividing Slokas
+
+            // --------------------------------------------
+            // Dividing Slokas
+            // --------------------------------------------
             // if the last 4 or 5 of nextEl value is number
             // then add $currenSlokaString to the document
             // indicating new line of sloka.
+            // --------------------------------------------
             if (!isNaN(slokaNumber = parseFloat(nextEl.substr(-4).trim()))) {
+              currentSlokaString = currentSlokaString == '' ? '' : currentSlokaString + '\n';
+
               if (nextEl.trim().length >= 4) {
-                currentSlokaString += '\n' + nextEl.substring(0, nextEl.length - 4).trim();
+                currentSlokaString += nextEl.substring(0, nextEl.length - 4).trim();
               } else {
-                currentSlokaString += '\n' + nextEl.trim();
+                currentSlokaString += nextEl.trim();
               }
               // add $currentSlokaString to document
               // clear $currentSlokaString.
+
+                // keeping slokaNumber to 2 precision float
+                // if the number higher than .9
+              if ((slokaCount + 1 > 9) && ((slokaCount + 1) % 10 === 0)) {
+                slokaNumber = slokaNumber + '0';
+              }
+
+              currentSlokaString = currentSlokaString.replace(/\n/g, " ").trim();
+
               root.push({sentences: [{ _attr: {sloka: slokaNumber}}, {sanskrit: currentSlokaString}]});
               slokaCount += 1;
               currentSlokaString = '';
