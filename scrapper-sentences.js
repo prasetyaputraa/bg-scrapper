@@ -65,12 +65,18 @@ for (let i = 1; i <= 18; i++) {
           }
 
           if (cheerio(element).text() == '\nTerjemahan') {
-            if (cheerio(element).next()[0].nextSibling.nodeValue.trim() != '') {
-              indonesian = cheerio(element).next()[0].nextSibling.nodeValue.trim().replace(/\n/g, " ");
+            if (i === 3) {
+              indonesian = cheerio(element).next().text().replace(/\n/g, " ").trim();
+
+              root.push({sentences: [{ _attr: { sloka: currentSloka}}, {sanskrit: sanskrit}, {indonesian: indonesian}]});
             } else {
-              indonesian = cheerio(element).next().next().text().trim().replace(/\n/g, " ");
+              if (cheerio(element).next()[0].nextSibling.nodeValue.trim() != '') {
+                indonesian = cheerio(element).next()[0].nextSibling.nodeValue.trim().replace(/\n/g, " ");
+              } else {
+                indonesian = cheerio(element).next().next().text().trim().replace(/\n/g, " ");
+              }
+              root.push({sentences: [{ _attr: { sloka: currentSloka}}, {sanskrit: sanskrit}, {indonesian: indonesian}]});
             }
-            root.push({sentences: [{ _attr: { sloka: currentSloka}}, {sanskrit: sanskrit}, {indonesian: indonesian}]});
           }
 
           slokaCount = currentSloka;

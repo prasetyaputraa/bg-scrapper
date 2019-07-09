@@ -1,9 +1,27 @@
+/* 
+*************************************************************
+Bhagawad Gita sentences scrapper.
+=============================================================
+
+written by: Dwi Prasetya Putra @prasetyaputraa
+last updated: 2019-07-10 04:20:07 GMT+8
+
+Description:
+------------
+Source for this scrapping was sacred-texts.com BG
+I used this for scrapping sanskrit texts of BG
+
+It's meant to be used for later step of merging
+sanskrit and indonesian texts of BG
+to create a bilingual corpus
+
+*************************************************************
+ */
+
 const rp            = require('request-promise');
 const cheerio       = require('cheerio');
 const xml           = require('xml');
 const fs            = require('fs');
-const DOMParser     = require('xmldom').DOMParser;
-const XMLSerializer = require('xmldom').XMLSerializer;
 
 let totalSloka = 0;
 
@@ -36,28 +54,22 @@ for (let i = 1; i <= 18; i++) {
 
           if (((typeof nextEl) === 'string') && nextEl.trim().length >= 1) {
 
-            // --------------------------------------------
+            // ***************************************************
             // Dividing Slokas
-            // --------------------------------------------
-            // if the last 4 or 5 of nextEl value is number
+            // ---------------------------------------------------
+            // if nextEl has floating point number in it's string
             // then add $currenSlokaString to the document
             // indicating new line of sloka.
-            // --------------------------------------------
-            if (!isNaN(slokaNumber = parseFloat(nextEl.substr(-4).trim()))) {
+            // ---------------------------------------------------
+            if (nextEl.match(/\d+\.\d+/g)) {
+              slokaNumber = nextEl.match(/\d+\.\d+/g)[0];
+
               currentSlokaString = currentSlokaString == '' ? '' : currentSlokaString + '\n';
 
               if (nextEl.trim().length >= 4) {
-                currentSlokaString += nextEl.substring(0, nextEl.length - 4).trim();
+                currentSlokaString += nextEl.replace(/\d+\.\d+/g, "").trim();
               } else {
                 currentSlokaString += nextEl.trim();
-              }
-              // add $currentSlokaString to document
-              // clear $currentSlokaString.
-
-                // keeping slokaNumber to 2 precision float
-                // if the number higher than .9
-              if ((slokaCount + 1 > 9) && ((slokaCount + 1) % 10 === 0)) {
-                slokaNumber = slokaNumber + '0';
               }
 
               currentSlokaString = currentSlokaString.replace(/\n/g, " ").trim();
@@ -68,7 +80,6 @@ for (let i = 1; i <= 18; i++) {
             } else {
               currentSlokaString += '\n' + nextEl.trim();
             }
-
           }
         });
 
