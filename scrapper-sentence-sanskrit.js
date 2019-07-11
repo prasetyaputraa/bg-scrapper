@@ -18,10 +18,10 @@ to create a bilingual corpus
 *************************************************************
  */
 
-const rp            = require('request-promise');
-const cheerio       = require('cheerio');
-const xml           = require('xml');
-const fs            = require('fs');
+const rp      = require('request-promise');
+const cheerio = require('cheerio');
+const xml     = require('xml');
+const fs      = require('fs');
 
 let totalSloka = 0;
 
@@ -32,12 +32,12 @@ for (let i = 1; i <= 18; i++) {
     let slokaCount = 0;
 
     let pageUrl = "http://sacred-texts.com/hin/bgs/bgs" + chapterNum + ".htm";
-    var root = xml.element();
+    var root    = xml.element();
 
     console.log('Fetching and processing data at url:', pageUrl);
 
     var xmlDocument = fs.createWriteStream('./raw_sentences_sanskrit/raw_sentences_sanskrit_bab' + i + '.xml');
-    var stream = xml({root: root}, {indent: '\t', stream: true, declaration: true});
+    var stream      = xml({root: root}, {indent: '\t', stream: true, declaration: true});
 
     stream.on('data', function (chunk) { 
         xmlDocument.write(chunk);
