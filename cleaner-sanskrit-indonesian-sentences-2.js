@@ -28,49 +28,42 @@ const readFile = util.promisify(fs.readFile);
  * 
  * @param {Function} callback function callback
  */
-async function main(callback) {
-  var logString = '';
+function main(callback) {
+  let logString = '';
+
   for (let i = 1; i <= 18; i++) {
-    (async function(i) {
-      var root = xml.element();
+    let root = xml.element();
 
-      return await readFile('./raw_sentences_sanskrit_indonesian/raw_sentences_merged_bab' + i + '.xml', 'utf8');
-    })(i)
-    .then((data) => {
-      let xmlData   = new DOMParser().parseFromString(data, 'text/xml');
-      let sentences = xmlData.documentElement.getElementsByTagName('sentences');
+    let data = fs.readFileSync(`./raw_sentences_sanskrit_indonesian/raw_sentences_merged_bab${i}.xml`, 'utf8');
 
-      for (sentence in sentences) {
-        if (typeof sentences[sentence].getAttribute !== 'undefined') {
-          let slokaNumber      = sentences[sentence].getAttribute('sloka');
-          let sanskritSentence = '';
-          let indonesiSentence = '';
+    let xmlData   = new DOMParser().parseFromString(data, 'text/xml');
+    let sentences = xmlData.documentElement.getElementsByTagName('sentences');
 
-          if (sentences[sentence].getElementsByTagName('sanskrit')[0].firstChild !== null) {
-            sanskritSentence = sentences[sentence].getElementsByTagName('sanskrit')[0].firstChild.nodeValue;
-          }
+    for (sentence in sentences) {
+      if (typeof sentences[sentence].getAttribute !== 'undefined') {
+        let slokaNumber = sentences[sentence].getAttribute('sloka');
 
-          if (sentences[sentence].getElementsByTagName('indonesian')[0].firstChild !== null) {
-            indonesiSentence = sentences[sentence].getElementsByTagName('indonesian')[0].firstChild.nodeValue;
-          }
+        let sanskritSentence = '';
+        let indonesiSentence = '';
 
-          //* cleaning start here
-          const {_logString, _sanskritSentence, _indonesiSentence} = clearNoise(i, slokaNumber, sanskritSentence, indonesiSentence);
-
-          // TODO: write clean sentence back to xml document
-
-          logString += _logString;
-
-          return logString
+        if ((sanSentenceText = sentences[sentence].getElementsByTagName('sanskrit')[0].firstChild) !== null) {
+          sanskritSentence = sanSentenceText.nodeValue;
         }
+
+        if ((indSentenceText = sentences[sentence].getElementsByTagName('indonesian')[0].firstChild) !== null) {
+          indonesiSentence = indSentenceText.nodeValue;
+        }
+
+        const {_logString, _sanskritSentence, _indonesiSentence} = clearNoise(i, slokaNumber, sanskritSentence, indonesiSentence);
+
+        logString += _logString;
       }
-    }).then(function(data) {
-      console.log(data);
-    });
+    }
+
   }
 
   callback(logString);
-};
+}
 
 /**
  * ! NOISE CLEANSING
@@ -92,6 +85,16 @@ function clearNoise(chapter, slokaNumber, sanskritSentence, indonesiSentence) {
   sanskritSentence.replace(/\((.*?)\)/g, '');
   indonesiSentence.replace(/\((.*?)\)/g, '');
 
+/* 
+  if (slokaNumber == ' ') {
+    console.log(`FOUND ON chapter ${i}`);
+    console.log('sanskrit', sanskritSentence);
+    console.log('indonesia', indonesiSentence);
+    console.log('\n');
+    console.log('\n');
+  }
+ */
+
   if (!sanskritSentence) {
     logString += `EMPTY SENTENCE FOUND: Chapter ${chapter} Sloka ${slokaNumber} in <SANSKRIT>\n`;
   }
@@ -104,5 +107,9 @@ function clearNoise(chapter, slokaNumber, sanskritSentence, indonesiSentence) {
 }
 
 main(function(log) {
-  console.log('LAST LOG:', log);
+  let logger = fs.createWriteStream('./log/clean_merging_log');
+
+  logger.write(log);
+  logger.end();
+  return;
 });
