@@ -19,6 +19,7 @@ const fs        = require('fs');
 const util      = require('util');
 const xml       = require('xml');
 const DOMParser = require('xmldom').DOMParser;
+const helper    = require('./helper');
 
 const readFile = util.promisify(fs.readFile);
 
@@ -85,22 +86,16 @@ function clearNoise(chapter, slokaNumber, sanskritSentence, indonesiSentence) {
   sanskritSentence.replace(/\((.*?)\)/g, '');
   indonesiSentence.replace(/\((.*?)\)/g, '');
 
-/* 
-  if (slokaNumber == ' ') {
-    console.log(`FOUND ON chapter ${i}`);
-    console.log('sanskrit', sanskritSentence);
-    console.log('indonesia', indonesiSentence);
-    console.log('\n');
-    console.log('\n');
-  }
- */
-
   if (!sanskritSentence) {
-    logString += `EMPTY SENTENCE FOUND: Chapter ${chapter} Sloka ${slokaNumber} in <SANSKRIT>\n`;
+    logString += `[101] EMPTY SENTENCE FOUND: Chapter ${chapter} Sloka ${slokaNumber} in <SANSKRIT>\n`;
   }
 
   if (!indonesiSentence) {
-    logString += `EMPTY SENTENCE FOUND: Chapter ${chapter} Sloka ${slokaNumber} in <INDONESIAN>\n`;
+    logString += `[102] EMPTY SENTENCE FOUND: Chapter ${chapter} Sloka ${slokaNumber} in <INDONESIAN>\n`;
+  }
+
+  if (helper.getNoiseSlokaNumber(sanskritSentence)) {
+    logString += `[201] SLOKA NUMBER NOISE FOUND: Chapter ${chapter} Sloka ${slokaNumber} in <SANSKRIT>\n`;
   }
 
   return {_logString: logString, _sanskritSentence: sanskritSentence, _indonesiSentence: indonesiSentence};
