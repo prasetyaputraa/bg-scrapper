@@ -15,11 +15,12 @@ self descriptive
 *************************************************************
  */
 
-const fs        = require('fs');
-const util      = require('util');
-const xml       = require('xml');
-const DOMParser = require('xmldom').DOMParser;
-const helper    = require('./helper');
+const fs            = require('fs');
+const util          = require('util');
+const helper        = require('./helper');
+const xml           = require('xml');
+const DOMParser     = require('xmldom').DOMParser;
+const XMLSerializer = require('xmldom').XMLSerializer;
 
 const readFile = util.promisify(fs.readFile);
 
@@ -44,23 +45,48 @@ function main(callback) {
       if (typeof sentences[sentence].getAttribute !== 'undefined') {
         let slokaNumber = sentences[sentence].getAttribute('sloka');
 
-        let sanskritSentence = '';
-        let indonesiSentence = '';
+        let _sanskritSentence = '';
+        let _indonesiSentence = '';
 
         if ((sanSentenceText = sentences[sentence].getElementsByTagName('sanskrit')[0].firstChild) !== null) {
-          sanskritSentence = sanSentenceText.nodeValue;
+          _sanskritSentence = sanSentenceText.nodeValue;
         }
 
         if ((indSentenceText = sentences[sentence].getElementsByTagName('indonesian')[0].firstChild) !== null) {
-          indonesiSentence = indSentenceText.nodeValue;
+          _indonesiSentence = indSentenceText.nodeValue;
         }
 
-        const {_logString, _sanskritSentence, _indonesiSentence} = clearNoise(i, slokaNumber, sanskritSentence, indonesiSentence);
+        let {_logString, sanskritSentence, indonesiSentence} = clearNoise(i, slokaNumber, _sanskritSentence, _indonesiSentence);
+
+        let {sanskritWords, indonesiWords} = getWordCount(sanskritSentence, indonesiSentence);
+
+        let sanskritWordCount = sanskritWords !== null ? sanskritWords.length : 0;
+        let indonesiWordCount = indonesiWords !== null ? indonesiWords.length : 0;
+        let wordsCountDiff    = sanskritWordCount - indonesiWordCount;
+
+        let newData = {
+          'wordDiff'         : wordsCountDiff,
+          'sanskritSentence' : sanskritSentence,
+          'indonesiSentence' : indonesiSentence,
+          'sanskritWordCount': sanskritWordCount,
+          'indonesiWordCount': indonesiWordCount
+        };
+
+        if (slokaNumber !== '') {
+          let newNode = updateSentence(sentences[sentence], newData);
+
+          xmlData.documentElement.replaceChild(newNode, sentence[sentence]);
+        }
 
         logString += _logString;
       }
     }
 
+    let xmlString = new XMLSerializer().serializeToString(xmlData);
+
+    fs.writeFile(`./clean_sentences_sanskrit_indonesian/clean_merged_bab${i}.xml`, xmlString, 'utf-8', (err, data) => {
+      console.log(`done for file: ${i}`);
+    });
   }
 
   callback(logString);
@@ -81,24 +107,45 @@ function main(callback) {
  * @param {string} indonesiSentence current sloka's string of indoensia
  */
 function clearNoise(chapter, slokaNumber, sanskritSentence, indonesiSentence) {
-  var logString = ''
+  var _logString = '';
 
-  sanskritSentence.replace(/\((.*?)\)/g, '');
-  indonesiSentence.replace(/\((.*?)\)/g, '');
+  _sanskritSentence = sanskritSentence.replace(/\((.*?)\)/g, '');
+  _indonesiSentence = indonesiSentence.replace(/\((.*?)\)/g, '');
 
-  if (!sanskritSentence) {
-    logString += `[101] EMPTY SENTENCE FOUND: Chapter ${chapter} Sloka ${slokaNumber} in <SANSKRIT>\n`;
+  if (!_sanskritSentence) {
+    _logString += `[101] EMPTY SENTENCE FOUND: Chapter ${chapter} Sloka ${slokaNumber} in <SANSKRIT>\n`;
   }
 
-  if (!indonesiSentence) {
-    logString += `[102] EMPTY SENTENCE FOUND: Chapter ${chapter} Sloka ${slokaNumber} in <INDONESIAN>\n`;
+  if (!_indonesiSentence) {
+    _logString += `[102] EMPTY SENTENCE FOUND: Chapter ${chapter} Sloka ${slokaNumber} in <INDONESIAN>\n`;
   }
 
-  if (helper.getNoiseSlokaNumber(sanskritSentence)) {
-    logString += `[201] SLOKA NUMBER NOISE FOUND: Chapter ${chapter} Sloka ${slokaNumber} in <SANSKRIT>\n`;
+  if (helper.getNoiseSlokaNumber(_sanskritSentence)) {
+    _logString += `[201] SLOKA NUMBER NOISE FOUND: Chapter ${chapter} Sloka ${slokaNumber} in <SANSKRIT>\n`;
   }
 
-  return {_logString: logString, _sanskritSentence: sanskritSentence, _indonesiSentence: indonesiSentence};
+  return {_logString: _logString, sanskritSentence: _sanskritSentence, indonesiSentence: _indonesiSentence};
+}
+
+function getWordCount(sanskritSentence, indonesiSentence) {
+  let _sanskritWords = sanskritSentence.match(/\s+/g);
+  let _indonesiWords = indonesiSentence.match(/\s+/g);
+
+  return {sanskritWords: _sanskritWords, indonesiWords: _indonesiWords};
+}
+
+function updateSentence(tag, newProps) {
+  let newTag = tag;
+
+  newTag.setAttribute('word-difference', newProps.wordDiff);
+
+  newTag.getElementsByTagName('sanskrit')[0].textContent   = newProps.sanskritSentence;
+  newTag.getElementsByTagName('indonesian')[0].textContent = newProps.indonesiSentence;
+
+  newTag.getElementsByTagName('sanskrit')[0].setAttribute('count', newProps.sanskritWordCount);
+  newTag.getElementsByTagName('indonesian')[0].setAttribute('count', newProps.indonesiWordCount);
+
+  return newTag;
 }
 
 main(function(log) {
